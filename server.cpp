@@ -323,8 +323,34 @@ int main(int argc , char *argv[])
                     printf("Host disconnected , ip %s , port %d \n" , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
                       
                     //Close the socket and mark as 0 in list for reuse
+					
+				
+				
+					
+					char user_name[1000];
+					for (int k=0; k<num_client; k++)
+					{
+						if (user_store[k].socket == sd)
+						{
+							strcpy(user_name,user_store[k].name);
+							user_store[k].status = 5;
+							break;
+						}
+					}
+					char temp[1000];
+					strcat(temp,"Offline_");
+					strcat(temp,user_name);
+					char temp2[] = "\n";
+					strcat(temp,temp2);
+					for (int k=0; k<num_client; k++)
+					{
+						if (user_store[k].status == 1)
+							send(user_store[k].socket,temp,strlen(temp),0);
+					}
                     close( sd );
                     client_socket[i] = 0;
+					
+					
                 }
                 else
                 {
@@ -634,7 +660,7 @@ void checkstatus(struct Client *user_store)
 	
 	for (i; i<num_client; i++)
 	{
-		if (user_store[i].status == 1 && i != map_id)
+		if (user_store[i].status == 1 )
 		{
 			
 			//sprintf(tempHolder,"%s ", user_store[i].name);
