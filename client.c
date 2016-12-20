@@ -26,14 +26,21 @@ void get_message(char message[],char username[], char password[]);
 bool check_name(char x[], char y[]);
 void get_message_status(char message[]);
 void get_message_upimage(char message[]);
+void get_message_searchimage(char message[]);
+void get_message_downimage(char message[]);
+void sendImage(char imagePath[], int socket);
+
+char username[1000];
+char password[1000];
+char global_image_path[200];
+long global_image_size;
+
 int main(int argc , char *argv[])
 {
     int sock;
     char id[1000];
     struct sockaddr_in server;
     char message[1000] , server_reply[10000],test[1];
-	char username[1000];
-	char password[1000];
 	char error[10];
 	int flag =0;
 	int share_id=-1;
@@ -69,119 +76,192 @@ int main(int argc , char *argv[])
     //keep communicating with server
     p1=fork();
 	//printf("main process = %d, p1= %d \n",main_process,p1);
- if(p1==0){
-	 
-    while(1)
-    {
-		//printf("p1 alive pid = %d \n",p1);
-		
-	if(flag==0){
-	printf("Register your Nickname: ");
-	login(username,password);
-	get_message(message,username,password);
 	
-	//gets(message);
-	for(i=0;i<=20;i++)
+	if(p1==0)
 	{
-		if(message[i]==' ')
+		while(1)
 		{
-			flag=1;
+			//printf("p1 alive pid = %d \n",p1);
+			bool b_upimage = false;
 			
-			break;
-		}
-		else if(i>=20)
-		{
-			printf("Invalid name, Your name is more than 20 character!\n");
-			break;
-		}
-		else if(message[i]=='\0')
-		{
-			printf("Your Name is: %s \n",message);
-	//message=id;
-			flag=1;
-			break;
-		}
-		
-	}
-	
-	}
-	else{
-		//printf("go to else\n");
-		bzero(message, strlen(message));
-		
-        gets(message);
-		if (check_name("login",message))
-		{
-			login(username,password);
-			get_message(message,username,password);
-		}
-		else if (check_name("checkstatus",message))
-			get_message_status(message);
-		else if (check_name("upimage",message))
-			get_message_upimage(message);
-		
-			
-        //fgets(message,sizeof(message),stdin);
-		//strtok(message, "\n");
-		
+			if(flag==0) 
+			{
+				printf("Register your Nickname: ");
+				login(username,password);
+				get_message(message,username,password);
 
-	}
-		if(flag==1)
-        if( send(sock , message , strlen(message) , 0) < 0)
-        {
-			//printf("go to fail  \n");
-            puts("Send failed");
-            return 1;
-        }
-		//printf("go out\n");
-        //Receive a reply from the server
-
-    }
-  }
- else{
-	 (*share_pid_pointer)=p1;
-   while(1){
-	 //printf("p1 alive pid = %d \n",p1);
-		//sleep(1);
-	if( recv(sock , server_reply , 2000 , 0) <= 0)
-        {
-            puts("recv failed");
-            break;
-        }
-		printf("server_reply: %s\n",server_reply);
-        puts(server_reply);
-		for(i=0;i<10;i++)
+				//gets(message);
+				for(i=0;i<=20;i++)
 				{
-					if(server_reply[i]==32 || server_reply[i]=='\0')
-						break;
-					else
-							error[i] = server_reply[i];
-					if(strcmp(error,"_EXIST_")==0)
+					if(message[i]==' ')
 					{
-						printf("in.p1= %d\n",p1);
-						kill(p1, SIGTERM);
+						flag=1;
+	
 						break;
 					}
-					
+					else if(i>=20)
+					{
+						printf("Invalid name, Your name is more than 20 character!\n");
+						break;
+					}
+					else if(message[i]=='\0')
+					{
+						printf("Your Name is: %s \n",message);
+				//message=id;
+						flag=1;
+						break;
+					}
 				}
-		if (server_reply[0] == '1')
+			}
+			else 
+			{
+				//printf("go to else\n");
+				bzero(message, strlen(message));
+
+				gets(message);
+				if (check_name("login",message))
+				{
+					login(username,password);
+					get_message(message,username,password);
+				}
+				else if (check_name("checkstatus",message))
+				{
+					get_message_status(message);
+				}
+				else if (check_name("upimage",message))
+				{
+					get_message_upimage(message);
+					b_upimage = true;
+					printf("path %s\nsize %d\n", global_image_path, global_image_size);
+				}
+				else if (check_name("searchimage",message))
+				{
+					get_message_searchimage(message);
+				}
+				else if (check_name("downimage",message))
+				{
+					get_message_downimage(message);
+				}
+				//fgets(message,sizeof(message),stdin);
+				//strtok(message, "\n");
+			}
+			if(flag==1) 
+			{
+				if (b_upimage)
+				{
+					if (global_image_size == 0)
+					{
+						printf("Invalid image!\n");
+					}
+					else
+					{
+						// send image info
+						b_upimage = false;						
+						if (send(sock , message , strlen(message) , 0) < 0)
+						{
+							puts("Send failed");
+							return 1;
+						}
+						printf("Send mes %s\n", message);
+						printf("path %s\nsize %d\n", global_image_path, global_image_size);
+					}
+				}
+				else 
+				{
+					if (send(sock , message , strlen(message) , 0) < 0)
+					{
+						//printf("go to fail  \n");
+						puts("Send failed");
+						return 1;
+					}
+					printf("Send mes %s\n", message);
+				}
+				//printf("go out\n");
+				//Receive a reply from the server
+			}
+
+		} // end of while
+	} // end of if
+	else
+	{
+		(*share_pid_pointer)=p1;
+		while(1)
 		{
-			printf("Now you can choose of one these functions by typing the function name:\n");
-			printf("1.checkstatus\n");
-			printf("2.upimage\n");
+		 	//printf("p1 alive pid = %d \n",p1);
+			//sleep(1);
+			if( recv(sock , server_reply , 2000 , 0) <= 0)
+			{
+				puts("recv failed");
+				break;
+			}
+			printf("server_reply: %s\n",server_reply);
+			puts(server_reply);
+			for(i=0;i<10;i++)
+			{
+				if(server_reply[i]==32 || server_reply[i]=='\0')
+					break;
+				else
+						error[i] = server_reply[i];
+				if(strcmp(error,"_EXIST_")==0)
+				{
+					printf("in.p1= %d\n",p1);
+					kill(p1, SIGTERM);
+					break;
+				}
+			
+			}
+			if (server_reply[0] == '1')
+			{
+				printf("Now you can choose of one these functions by typing the function name:\n");
+				printf("1.checkstatus\n");
+				printf("2.upimage\n");
+				printf("3.searchimage\n");
+				printf("4.downimage\n");
+			}
+			else if (server_reply[0] == '2')
+			{
+				printf("you must login again by typing 'login' \n" );
+			}
+			else if (server_reply[0] == '3') // rcv meta success
+			{
+				printf("Meta data accepted\n");
+				char imagePath[200];
+				strcpy(imagePath, "test2.jpg");
+				printf("sock %d\n", sock);
+				sendImage(imagePath, sock);
+			}
+			else if (server_reply[0] == '4') // rcv meta fail
+			{
+				printf("Send meta fail\n");
+			}
+			else if (server_reply[0] == '5') // rcv image success
+			{
+				printf("Send image success\n");
+			}
+			else if (server_reply[0] == '6') // rcv image fail
+			{
+				printf("Send image fail\n");
+			}
+			else if (server_reply[0] == '7') // rcv image fail
+			{
+				printf("ok\n");
+			}
+			else if (server_reply[0] == '8') // rcv image fail
+			{
+				printf("not found\n");
+			}
+			else if (check_name("ListOnline_quach_tq",server_reply)==0)
+			{
+				printf("fuck\n");
+			}
+			else if (check_name("List", server_reply)==0)
+			{
+				//printf("%s\n", server_reply);
+			}
+			bzero(server_reply,strlen(server_reply));
+
 		}
-		else if (server_reply[0] == '2')
-		{
-			printf("you must login again by typing 'login' \n" );
-		}
-		else if (check_name("ListOnline_quach_tq",server_reply)==0)
-		{
-			printf("fuck\n");
-		}
-		bzero(server_reply,strlen(server_reply));
-	
-    }
-  } 
+	} 
 	printf("out.p1= %d\n",p1);
 	printf("main process = %d, p1= %d, share id pointer = %d \n",main_process,p1,(*share_pid_pointer));
 	
@@ -236,24 +316,105 @@ void get_message_status(char message[])
 	
 }
 void get_message_upimage(char message[])
-{	
-	char image_name[50], title[50], person_upload[50], note[50],type_image[50],size[50];
-	printf(" input name of image:");
+{
+	// Upload_imageName_theme_uploader_extension_imageSize_note_fileSize
+	char image_name[50], theme[50], note[50], type_image[50], size[50], file_size[10], path[200];
+	printf("Input name of image: ");
 	gets(image_name);
-	printf("input title:");
-	gets(title);
-	printf("input person upload");
-	gets(person_upload);
-	printf("input note of image");
+	printf("Input theme: ");
+	gets(theme);
+	printf("Input note of image: ");
 	gets(note);
-	printf("type of image");
+	printf("Type of image: ");
 	gets(type_image);
-	printf("size of image");
+	printf("Image size: ");
 	gets(size);
-	char temp ="_upimage_ádsad_";
-	char temp2 = "_";
-	strcat(temp,image_name);
-
+	printf("Input image path: ");
+	gets(path);
+	strcpy(global_image_path, path);
+	//Get Picture Size
+	FILE *picture;
+	picture = fopen(global_image_path, "r");
+	fseek(picture, 0, SEEK_END);
+	long fsize = ftell(picture);
+	global_image_size = fsize;
+	printf("path %s\nsize %d\n", global_image_path, global_image_size);
+	fseek(picture, 0, SEEK_SET);
 	
-	
+	char tmp_message[500] = "Upload";
+	strcat(tmp_message, "_");
+	strcat(tmp_message, image_name);
+	strcat(tmp_message, "_");
+	strcat(tmp_message, theme);
+	strcat(tmp_message, "_");
+	strcat(tmp_message, username);
+	strcat(tmp_message, "_");
+	strcat(tmp_message, type_image);
+	strcat(tmp_message, "_");
+	strcat(tmp_message, size);
+	strcat(tmp_message, "_");
+	strcat(tmp_message, note);
+	strcat(tmp_message, "_");
+	sprintf(file_size, "%d", global_image_size);
+	strcat(tmp_message, file_size);
+	strcpy(message, tmp_message);
 }
+
+void get_message_searchimage(char message[])
+{
+	// Search_theme_uploader
+	char theme[50], uploader[50];
+	printf("Input theme: ");
+	gets(theme);
+	printf("Input uploader of image: ");
+	gets(uploader);
+	char tmp_message[100] = "Search_";
+	strcat(tmp_message, theme);
+	strcat(tmp_message, "_");
+	strcat(tmp_message, uploader);
+	strcpy(message, tmp_message);
+}
+void get_message_downimage(char message[])
+{
+	char name[50];
+	printf("Input name: ");
+	gets(name);
+	char tmp_message[100] = "Down_";
+	strcat(tmp_message, name);
+	strcpy(message, tmp_message);
+}
+
+void sendImage(char imagePath[], int socket) 
+{
+	//Get Picture Size
+	FILE *picture;
+	picture = fopen(imagePath, "r");
+	fseek(picture, 0, SEEK_END);
+	long fsize = ftell(picture);
+	fseek(picture, 0, SEEK_SET);
+
+	printf("path %s\nsize %d\n", imagePath, fsize);
+	
+	// convert picture
+	char file_buffer[fsize];
+	fread(file_buffer, 1, fsize, picture);
+
+printf("sock %d\n", socket);
+
+	char send_buffer[fsize + 6];
+	memcpy(send_buffer, "Image_", 6);
+	memcpy(send_buffer + 6, file_buffer, fsize);
+	
+	printf("Send buffer: %s", send_buffer);
+
+	char send_fragment[1024];
+	int loop = (fsize+6)/1024;
+	for (int i = 0; i < loop; ++i) {
+		memcpy(send_fragment, send_buffer + (i*1024), 1024);
+		send(socket, send_fragment, 1024,0);
+	}
+}
+
+
+
+

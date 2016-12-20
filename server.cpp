@@ -93,6 +93,9 @@ struct Image
 };
 Image readImageFromFile(ifstream& fin);
 void readAllImage(ifstream& fin, Image* all, int &num);
+bool checkImageValid(Image image, Image* all, int num);
+char* removeExtension(char name[]);
+bool checkImageExist(char image[], Image* all, int num);
 
 //Functions
 char *action_form_buffer(char buffer[]);
@@ -189,8 +192,9 @@ int main(int argc , char *argv[])
     struct sockaddr_in address;
 	char action[10];
 	char action2[100];
-    char buffer[1025];  //data buffer of 1K
+    char buffer[1024];  //data buffer of 1K
 	char server_message[2000];
+	Image newImage;
     
     //set of socket descriptors
     fd_set readfds;
@@ -323,34 +327,30 @@ int main(int argc , char *argv[])
                     printf("Host disconnected , ip %s , port %d \n" , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
                       
                     //Close the socket and mark as 0 in list for reuse
-					
-				
-				
-					
-					char user_name[1000];
-					for (int k=0; k<num_client; k++)
-					{
-						if (user_store[k].socket == sd)
-						{
-							strcpy(user_name,user_store[k].name);
-							user_store[k].status = 5;
-							break;
-						}
-					}
-					char temp[1000];
-					strcat(temp,"Offline_");
-					strcat(temp,user_name);
-					char temp2[] = "\n";
-					strcat(temp,temp2);
-					for (int k=0; k<num_client; k++)
-					{
-						if (user_store[k].status == 1)
-							send(user_store[k].socket,temp,strlen(temp),0);
-					}
+
+					char user_name[1000]; 
+					for (int k=0; k<num_client; k++) 
+					{ 
+						if (user_store[k].socket == sd) 
+						{ 
+							strcpy(user_name,user_store[k].name); 
+							user_store[k].status = 5; 
+							break; 
+						} 
+					} 
+					char temp[1000]; 
+					strcat(temp,"Offline_"); 
+					strcat(temp,user_name); 
+					char temp2[] = "\n"; 
+					strcat(temp,temp2); 
+					for (int k=0; k<num_client; k++) 
+					{ 
+						if (user_store[k].status == 1) 
+						send(user_store[k].socket,temp,strlen(temp),0); 
+					} 
+
                     close( sd );
                     client_socket[i] = 0;
-					
-					
                 }
                 else
                 {
@@ -452,7 +452,7 @@ int main(int argc , char *argv[])
 									{
 										checkstatus(user_store);
 									}
-									else if(strcmp(action,"Upload") ==0 )
+									else if(strcmp(action,"Upload") == 0)
 									{
 										// Upload_imageName_theme_uploader_extension_imageSize_note_fileSize
 										// Upload_toan1_theme_uploader_extension_imageSize_note_1234
@@ -464,51 +464,51 @@ int main(int argc , char *argv[])
 										
 										char imageName[50];
 										strcpy(imageName, command[1]);
-										printf("%s\n", imageName);
+										printf("Name: %s\n", imageName);
 
 										char theme[50];
 										strcpy(theme, command[2]);
-										printf("%s\n", theme);
+										printf("Theme: %s\n", theme);
 
 										char uploader[50];
 										strcpy(uploader, command[3]);
-										printf("%s\n", uploader);
+										printf("Uploader: %s\n", uploader);
 
 										char extension[10];
 										strcpy(extension, command[4]);
-										printf("%s\n", extension);
+										printf("extansion: %s\n", extension);
 
 										char imageSize[20];
 										strcpy(imageSize, command[5]);
-										printf("%s\n", imageSize);
+										printf("size %s\n", imageSize);
 
 										char note[50];
 										strcpy(note, command[6]);
-										printf("%s\n", note);
+										printf("note %s\n", note);
 
 										char size[50];
 										strcpy(size, command[7]);
 										long fileSize = atol(size);
-										printf("%d\n", fileSize);
+										printf("file %d\n", fileSize);
 
-										Image newImage(imageName,theme,uploader,extension,imageSize,note,fileSize);								
+										newImage = Image(imageName,theme,uploader,extension,imageSize,note,fileSize);
+
+										// read images to data file
 										Image allImage[100];
 										int numImage;
 										ifstream fin;
 										fin.open(IMAGE_FILE);
 										readAllImage(fin, allImage, numImage);
 
-										allImage[numImage] = newImage;
-										numImage++;
-										fin.close();
-
-										ofstream fout;
-										fout.open(IMAGE_FILE, std::ios::out | std::ios::trunc);
-										fout << numImage << endl;
-										for (int i = 0; i < numImage; ++i) {
-											allImage[i].writeToFile(fout);
+										if (checkImageValid(newImage, allImage, numImage))
+										{
+											send(user_store[map_id].socket, "3", strlen("3"), 0); // rcv meta success
+											printf("Accept meta data\n");
 										}
-										fout.close();
+										else 
+										{
+											send(user_store[map_id].socket, "4", strlen("5"), 0); // reject metadata						
+										}
 									}
 									else if (strcmp(action, "SignUp") == 0)
 									{
@@ -528,6 +528,143 @@ int main(int argc , char *argv[])
 										num_client++;
 
 										send(user_store[map_id].socket, "9", strlen("9"), 0);
+									}
+									else if (strcmp(action, "Image") == 0)
+									{
+										char file_buffer[newImage.fileSize];
+										memcpy(file_buffer, buffer + 6, 1024 - 6);
+
+										int loop = (newImage.fileSize + 6)/1024 - 1;
+
+										for (int i = 0; i < loop; ++i)
+										{
+											read( sd , buffer, 1024);
+											memcpy(file_buffer + 1024 - 6 + i*1024, buffer, 1024);
+										}
+
+										//Convert it Back into Picture
+										printf("Converting Byte Array to Picture %d\n", newImage.fileSize);
+										FILE *image;
+										char *file_name = newImage.name;
+										strcat(file_name, ".");
+										strcat(file_name, newImage.extension);
+										image = fopen(file_name, "wb");
+										fwrite(file_buffer, 1, newImage.fileSize, image);
+										fclose(image);
+
+										// insert image to data file
+										Image allImage[100];
+										int numImage;
+										ifstream fin;
+										fin.open(IMAGE_FILE);
+										readAllImage(fin, allImage, numImage);
+
+										allImage[numImage] = newImage;
+										numImage++;
+										fin.close();
+
+										ofstream fout;
+										fout.open(IMAGE_FILE, std::ios::out | std::ios::trunc);
+										fout << numImage << endl;
+										for (int i = 0; i < numImage; ++i) {
+											allImage[i].writeToFile(fout);
+										}
+										fout.close();
+
+										send(user_store[map_id].socket, "5", strlen("5"), 0); // rcv image success
+									}
+									else if (strcmp(action, "Search") == 0) 
+									{
+										int numCommand = 0;
+										char command[20][50];
+										parseStringCommand(buffer, command, numCommand);
+
+										printf("Search %s\n", buffer);
+
+										char theme[50];
+										strcpy(theme, command[1]);
+										printf("Theme: %s\n", theme);
+
+										char uploader[50];
+										strcpy(uploader, command[2]);
+										printf("Uploader: %s\n", uploader);
+
+										Image allImage[100];
+										int numImage;
+										ifstream fin;
+										fin.open(IMAGE_FILE);
+										readAllImage(fin, allImage, numImage);
+
+										Image result[100];
+										int resultNum = 0;
+										for (int i = 0; i < numImage; ++i)
+										{
+											string check_tmp = allImage[i].theme;
+											string check_tmp2 = allImage[i].uploader;
+											if (check_tmp.find(theme) != std::string::npos && check_tmp2.find(uploader) != std::string::npos)
+											{
+												result[resultNum] = allImage[i];
+												resultNum++;
+											}
+										}
+							// List_listSize_Image1{ImageName,theme,uploader,extension,imageSize,note}_Image2{ImageName,theme,uploader,extension,imageSize,note}_
+										char response[1024];
+										strcpy(response, "List_");
+
+										char list_size[5];
+										sprintf(list_size, "%d", resultNum);
+										strcat(response, list_size);
+										for (int i = 0; i < resultNum; ++i)
+										{
+											char image_count[5];
+											sprintf(image_count, "%d", i+1);
+											strcat(response, "_Image");
+											strcat(response, image_count);
+											strcat(response, "{");
+											strcat(response, result[i].name);
+											strcat(response, ",");
+											strcat(response, result[i].theme);
+											strcat(response, ",");
+											strcat(response, result[i].uploader);
+											strcat(response, ",");
+											strcat(response, result[i].extension);
+											strcat(response, ",");
+											strcat(response, result[i].imageSize);
+											strcat(response, ",");
+											strcat(response, result[i].note);
+											strcat(response, ",");
+											char strFileSize[10];
+											sprintf(strFileSize, "%d", result[i].fileSize);
+											strcat(response, strFileSize);
+											strcat(response, "}");
+										}
+										printf("Send back %s\n", response);
+										send(user_store[map_id].socket, response, strlen(response), 0);
+									}
+									else if (strcmp(action, "Down") == 0)
+									{
+										int numCommand = 0;
+										char command[20][50];
+										parseStringCommand(buffer, command, numCommand);
+
+										char name[50];
+										strcpy(name, command[1]);
+										printf("Name: %s\n", name);
+										Image allImage[100];
+										int numImage;
+										ifstream fin;
+										fin.open(IMAGE_FILE);
+										readAllImage(fin, allImage, numImage);
+
+										if (checkImageExist(name, allImage, numImage))
+										{
+											
+											send(user_store[map_id].socket, "7", strlen("7"), 0); // ok send
+										}
+										else 
+										{
+											send(user_store[map_id].socket, "8", strlen("8"), 0); // not found						
+										}
 									}
 									else
 									{
@@ -564,7 +701,6 @@ int main(int argc , char *argv[])
 									//--send the message return from those func above
 									
 								}
-								
 							//3--
 							}
 					}
@@ -660,13 +796,11 @@ void checkstatus(struct Client *user_store)
 	
 	for (i; i<num_client; i++)
 	{
-		if (user_store[i].status == 1 )
+		if (user_store[i].status == 1)
 		{
 			
 			//sprintf(tempHolder,"%s ", user_store[i].name);
 			char temp2[] = "_";
-			
-			
 			
 			strcat(temp, temp2);
 			strcat(temp, user_store[i].name);
@@ -755,23 +889,90 @@ void Image::writeToFile(ofstream& fout) {
 Image readImageFromFile(ifstream& fin) 
 {
 	Image image;
-	fin >> image.name;
-	fin >> image.theme;
-	fin >> image.uploader;
-	fin >> image.extension;
-	fin >> image.imageSize;
-	fin >> image.note;
-	fin >> image.fileSize;
+
+	string name;
+	getline(fin, name);
+	strcpy(image.name, name.c_str());
+
+	string theme;
+	getline(fin, theme);
+	strcpy(image.theme,theme.c_str());
+
+	string uploader;
+	getline(fin, uploader);
+	strcpy(image.uploader, uploader.c_str());
+
+	string extension;
+	getline(fin, extension);
+	strcpy(image.extension, extension.c_str());
+
+	string imageSize;
+	getline(fin, imageSize);
+	strcpy(image.imageSize, imageSize.c_str());
+
+	string note;
+	getline(fin, note);
+	strcpy(image.note, note.c_str());
+
+	string size;
+	getline(fin, size);
+	image.fileSize = atoi(size.c_str());
+
 	return image;
 }
 
 void readAllImage(ifstream& fin, Image* allImage, int &numImage) 
 {
 	fin >> numImage;
+	fin.get();
 	for (int i = 0; i < numImage; ++i) {
 		allImage[i] = readImageFromFile(fin);
 	}
 }
+
+bool checkImageValid(Image image, Image* all, int num) {
+	for (int i = 0; i < num; ++i) {
+
+		if (strcmp(image.name, removeExtension(all[i].name)) == 0) 
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+char* removeExtension(char name[]) 
+{
+	string strname = name;
+	int flag = 0;
+	for (int j = strname.length() - 1; j > 0; j--)
+	{
+		if (strname[j] == '.')
+		{
+			flag = j;
+			break;
+		}
+	}
+	if (flag > 0)
+	{
+		strcpy(name, strname.substr(0, flag).c_str());
+	}
+	return name;
+}
+
+bool checkImageExist(char image[], Image* all, int num) {
+	for (int i = 0; i < num; ++i) {
+		char cmpName[50];
+		strcpy(cmpName, removeExtension(all[i].name));
+		printf("compare %s and %s\n", image, cmpName);
+		if (strcmp(image, cmpName) == 0) 
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 
 
 
