@@ -95,7 +95,7 @@ Image readImageFromFile(ifstream& fin);
 void readAllImage(ifstream& fin, Image* all, int &num);
 bool checkImageValid(Image image, Image* all, int num);
 char* removeExtension(char name[]);
-bool checkImageExist(char image[], Image* all, int num);
+int checkImageExist(char image[], Image* all, int num);
 
 //Functions
 char *action_form_buffer(char buffer[]);
@@ -655,15 +655,33 @@ int main(int argc , char *argv[])
 										ifstream fin;
 										fin.open(IMAGE_FILE);
 										readAllImage(fin, allImage, numImage);
-
-										if (checkImageExist(name, allImage, numImage))
+										int index = checkImageExist(name, allImage, numImage);
+										if (index >= 0)
 										{
+											//Get Picture Size
+											FILE *picture;
+											picture = fopen(allImage[index].name, "r");
+											int fsize = allImage[index].fileSize;
 											
-											send(user_store[map_id].socket, "7", strlen("7"), 0); // ok send
+											printf("path %s\nsize %d\n", allImage[index].name, fsize);
+	
+											// convert picture
+											char file_buffer[fsize];
+											fread(file_buffer, 1, fsize, picture);
+	
+											printf("Send buffer: %s", file_buffer);
+
+											char send_fragment[1024];
+											int loop = fsize/1024;
+											for (int i = 0; i < loop; ++i) {
+												memcpy(send_fragment, file_buffer + (i*1024), 1024);
+												send(user_store[map_id].socket, send_fragment, 1024,0);
+											}
+											// send(user_store[map_id].socket, "7", strlen("7"), 0); // ok send
 										}
-										else 
+										else
 										{
-											send(user_store[map_id].socket, "8", strlen("8"), 0); // not found						
+											// send(user_store[map_id].socket, "8", strlen("8"), 0); // not found						
 										}
 									}
 									else
@@ -820,13 +838,15 @@ void parseStringCommand(char *buffer, char (*command)[50], int &numCommand)
 	int length = 0;
 	for (int i = 1; i < str.length(); ++i) {
 		if (str[i] == '_') {
-			strncpy(command[numCommand], str.substr(flag, length).c_str(), length);
+			memcpy(command[numCommand], str.substr(flag, length).c_str(), length);
+			memset(command[numCommand] + length, '\0', 1);
 			numCommand++;
 			flag += length + 1;
 			length = 0;
 		}
 		else if (i == str.length() - 1) {
-			strncpy(command[numCommand], str.substr(flag, length + 1).c_str(), length + 1);
+			memcpy(command[numCommand], str.substr(flag, length + 1).c_str(), length + 1);
+			memset(command[numCommand] + length + 1, '\0', 1);
 			numCommand++;
 		}
 		else {
@@ -960,17 +980,17 @@ char* removeExtension(char name[])
 	return name;
 }
 
-bool checkImageExist(char image[], Image* all, int num) {
+int checkImageExist(char image[], Image* all, int num) {
 	for (int i = 0; i < num; ++i) {
 		char cmpName[50];
 		strcpy(cmpName, removeExtension(all[i].name));
 		printf("compare %s and %s\n", image, cmpName);
 		if (strcmp(image, cmpName) == 0) 
 		{
-			return true;
+			return i;
 		}
 	}
-	return false;
+	return -1;
 }
 
 
