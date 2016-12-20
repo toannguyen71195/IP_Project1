@@ -458,6 +458,7 @@ int main(int argc , char *argv[])
 										// Upload_toan1_theme_uploader_extension_imageSize_note_1234
 										// Upload_toan2_theme_uploader_extension_imageSize_note_1234
 										// Upload_toan3_theme_uploader_extension_imageSize_note_1234
+										printf("buffer: %s", buffer);
 										int numCommand = 0;
 										char command[20][50];
 										parseStringCommand(buffer, command, numCommand);
@@ -502,12 +503,12 @@ int main(int argc , char *argv[])
 
 										if (checkImageValid(newImage, allImage, numImage))
 										{
-											send(user_store[map_id].socket, "3", strlen("3"), 0); // rcv meta success
+											send(user_store[map_id].socket, "3\n", strlen("3\n"), 0); // rcv meta success
 											printf("Accept meta data\n");
 										}
 										else 
 										{
-											send(user_store[map_id].socket, "4", strlen("5"), 0); // reject metadata						
+											send(user_store[map_id].socket, "4\n", strlen("4\n"), 0); // reject metadata						
 										}
 									}
 									else if (strcmp(action, "SignUp") == 0)
@@ -527,7 +528,7 @@ int main(int argc , char *argv[])
 										user_store[num_client] = temp;
 										num_client++;
 
-										send(user_store[map_id].socket, "9", strlen("9"), 0);
+										send(user_store[map_id].socket, "9\n", strlen("9\n"), 0);
 									}
 									else if (strcmp(action, "Image") == 0)
 									{
@@ -571,7 +572,7 @@ int main(int argc , char *argv[])
 										}
 										fout.close();
 
-										send(user_store[map_id].socket, "5", strlen("5"), 0); // rcv image success
+										send(user_store[map_id].socket, "5\n", strlen("5\n"), 0); // rcv image success
 									}
 									else if (strcmp(action, "Search") == 0) 
 									{
@@ -658,10 +659,14 @@ int main(int argc , char *argv[])
 										int index = checkImageExist(name, allImage, numImage);
 										if (index >= 0)
 										{
+											//send(user_store[map_id].socket, "7\n", 1024, 0); // ok send
 											//Get Picture Size
 											FILE *picture;
 											picture = fopen(allImage[index].name, "r");
-											int fsize = allImage[index].fileSize;
+
+											fseek(picture, 0, SEEK_END);
+											int fsize = ftell(picture);
+											fseek(picture, 0, SEEK_SET);
 											
 											printf("path %s\nsize %d\n", allImage[index].name, fsize);
 	
@@ -673,9 +678,11 @@ int main(int argc , char *argv[])
 
 											char send_fragment[1024];
 											int loop = fsize/1024;
+											
 											for (int i = 0; i < loop; ++i) {
 												memcpy(send_fragment, file_buffer + (i*1024), 1024);
 												send(user_store[map_id].socket, send_fragment, 1024,0);
+												
 											}
 											// send(user_store[map_id].socket, "7", strlen("7"), 0); // ok send
 										}
@@ -983,7 +990,7 @@ char* removeExtension(char name[])
 int checkImageExist(char image[], Image* all, int num) {
 	for (int i = 0; i < num; ++i) {
 		char cmpName[50];
-		strcpy(cmpName, removeExtension(all[i].name));
+		strcpy(cmpName, all[i].name);
 		printf("compare %s and %s\n", image, cmpName);
 		if (strcmp(image, cmpName) == 0) 
 		{
