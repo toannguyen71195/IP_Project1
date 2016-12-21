@@ -410,28 +410,17 @@ void sendImage(char imagePath[], int socket)
 	fseek(picture, 0, SEEK_END);
 	long fsize = ftell(picture);
 	fseek(picture, 0, SEEK_SET);
-
-	printf("path %s\nsize %d\n", imagePath, fsize);
 	
 	// convert picture
 	char file_buffer[fsize];
 	fread(file_buffer, 1, fsize, picture);
 
-	printf("sock %d\n", socket);
-
 	char send_buffer[fsize + 6];
 	memcpy(send_buffer, "Image_", 6);
 	memcpy(send_buffer + 6, file_buffer, fsize);
 	
-	printf("Send buffer: %s", send_buffer);
-
-	char send_fragment[1024];
-	int loop = (fsize+6)/1024;
-	int i=0;
-	for (i; i < loop; ++i) {
-		memcpy(send_fragment, send_buffer + (i*1024), 1024);
-		send(socket, send_fragment, 1024,0);
-	}
+	// printf("Send buffer: %s", send_buffer);
+	send(socket, send_buffer, fsize + 6, 0);
 }
 
 void receiveImage(char filePath[], int size, int socket)
@@ -439,9 +428,8 @@ void receiveImage(char filePath[], int size, int socket)
 	int loop = size/1024;
 	char file_buffer[size];
 	char rbuffer[1024];
-	int i=0;
-	
-	for (i; i < loop; ++i)
+	printf("Loop: %d", loop);
+	for (int i = 0; i < loop; ++i)
 	{
 		read(socket, rbuffer, 1024);
 		memcpy(file_buffer + i*1024, rbuffer, 1024);

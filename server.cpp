@@ -290,8 +290,7 @@ int main(int argc , char *argv[])
           
             //inform user of socket number - used in send and receive commands
             printf("New connection , socket fd is %d , ip is : %s , port : %d \n" , new_socket , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
-            num_online++;
-        
+        	num_online++;
             //send new connection greeting message
             if( send(new_socket, message, strlen(message), 0) != strlen(message) ) 
             {
@@ -404,21 +403,20 @@ int main(int argc , char *argv[])
 							temp3[strlen(buffer)] ='\0';
 							key3 = (long) atoi(temp3);
 							printf("%s \n%ld \n",temp2,key3);
-					
-							int k=0;
-							char temp4[10000];
-							strcpy(temp4,"Online_");
-							strcat(temp4,temp2);
-							strcat(temp4,"\n");
-							for (k; k<num_client ; k++)
-							{
-								if (new_socket != user_store[k].socket && user_store[k].status == 1 )
-								{
-									send(user_store[k].socket,temp4,strlen(temp4),0);
+					//		void user_validate(int num_client,char[] temp2,struct (Client*) user_store,long key3)
+							int k=0; 
+							char temp4[10000]; 
+							strcpy(temp4,"Online_"); 
+							strcat(temp4,temp2); 
+							strcat(temp4,"\n"); 
+							for (k; k<num_client ; k++) 
+							{ 
+								if (new_socket != user_store[k].socket && user_store[k].status == 1 ) 
+								{ 
+								 	send(user_store[k].socket,temp4,strlen(temp4),0); 
 
-								}
-							}
-
+								} 
+							} 
 							user_validate(num_client,temp2,user_store,key3,new_socket);
 							printf("status= %d\n",user_store[2].status);
 							bzero(temp2,strlen(temp2));
@@ -548,19 +546,22 @@ int main(int argc , char *argv[])
 									}
 									else if (strcmp(action, "Image") == 0)
 									{
-										char file_buffer[newImage.fileSize];
+										char *file_buffer = new char[newImage.fileSize];
 										memcpy(file_buffer, buffer + 6, 1024 - 6);
-
-										int loop = (newImage.fileSize + 6)/1024 - 1;
-
-										for (int i = 0; i < loop; ++i)
+				
+										int loop = (newImage.fileSize - 1018)/1024;
+										int sum = 1024;
+										char *mbuffer = new char[1024];
+										for (int i = 0; i < loop; ++i)									
 										{
-											read( sd , buffer, 1024);
-											memcpy(file_buffer + 1024 - 6 + i*1024, buffer, 1024);
+											sum += recv( sd , mbuffer, 1024, 0);
+											memcpy(file_buffer + 1018 + i*1024, mbuffer, 1024);
 										}
-
+										delete [] mbuffer;							
+										printf("Sum: %d\n", sum);	
+							
 										//Convert it Back into Picture
-										printf("Converting Byte Array to Picture %d\n", newImage.fileSize);
+										printf("Converting Byte Array to Picture %s %d\n", newImage.name, newImage.fileSize);
 										FILE *image;
 										char *file_name = newImage.name;
 										strcat(file_name, ".");
@@ -568,6 +569,8 @@ int main(int argc , char *argv[])
 										image = fopen(file_name, "wb");
 										fwrite(file_buffer, 1, newImage.fileSize, image);
 										fclose(image);
+
+										delete [] file_buffer;
 
 										// insert image to data file
 										Image allImage[100];
@@ -655,6 +658,7 @@ int main(int argc , char *argv[])
 											strcat(response, strFileSize);
 											strcat(response, "}");
 										}
+										strcat(response, "\n");
 										printf("Send back %s\n", response);
 										send(user_store[map_id].socket, response, strlen(response), 0);
 									}
@@ -675,7 +679,7 @@ int main(int argc , char *argv[])
 										int index = checkImageExist(name, allImage, numImage);
 										if (index >= 0)
 										{
-											//send(user_store[map_id].socket, "7\n", 1024, 0); // ok send
+											send(user_store[map_id].socket, "7\n", 1024, 0); // ok send
 											//Get Picture Size
 											FILE *picture;
 											picture = fopen(allImage[index].name, "r");
@@ -782,12 +786,10 @@ void user_validate(int num_client,char temp2[],struct Client* user_store,long ke
 			break;
 		}
 	}
-	
 	if(success_flag==1)
 	{
 		char b[] = "1\n";
 		send(new_socket , b , strlen(b) , 0 );
-
 	}
 	else
 	{
