@@ -557,7 +557,7 @@ int main(int argc , char *argv[])
 											sum += recv( sd , mbuffer, 1024, 0);
 											memcpy(file_buffer + 1018 + i*1024, mbuffer, 1024);
 										}
-										delete [] mbuffer;							
+																	
 										printf("Sum: %d\n", sum);	
 							
 										//Convert it Back into Picture
@@ -570,6 +570,7 @@ int main(int argc , char *argv[])
 										fwrite(file_buffer, 1, newImage.fileSize, image);
 										fclose(image);
 
+										delete [] mbuffer;
 										delete [] file_buffer;
 
 										// insert image to data file
@@ -679,7 +680,7 @@ int main(int argc , char *argv[])
 										int index = checkImageExist(name, allImage, numImage);
 										if (index >= 0)
 										{
-											send(user_store[map_id].socket, "7\n", 1024, 0); // ok send
+											//send(user_store[map_id].socket, "7\n", 1024, 0); // ok send
 											//Get Picture Size
 											FILE *picture;
 											picture = fopen(allImage[index].name, "r");
@@ -695,15 +696,9 @@ int main(int argc , char *argv[])
 											fread(file_buffer, 1, fsize, picture);
 	
 											printf("Send buffer: %s", file_buffer);
-
-											char send_fragment[1024];
-											int loop = fsize/1024;
 											
-											for (int i = 0; i < loop; ++i) {
-												memcpy(send_fragment, file_buffer + (i*1024), 1024);
-												send(user_store[map_id].socket, send_fragment, 1024,0);
-												
-											}
+											send(user_store[map_id].socket, file_buffer, fsize,0);
+
 											// send(user_store[map_id].socket, "7", strlen("7"), 0); // ok send
 										}
 										else

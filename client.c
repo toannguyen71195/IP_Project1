@@ -272,7 +272,7 @@ int main(int argc , char *argv[])
 				printf("Receive image\n");
 				char filePath[200];
 				strcpy(filePath, "download.jpg");
-				int size = 33176;
+				int size = 633445;
 				receiveImage(filePath, size, sock);
 				waitforimage = false;
 				printf("Finisehd rcv\n");
