@@ -57,6 +57,7 @@ struct Client
 };
 int num_client=0;
 int map_id;
+int num_online=0;
 struct Client Object_new(char _name[], long _key, int _period,int _status, int _socket) { 
 	struct Client p;
 	strcpy(p.name,_name);
@@ -289,6 +290,7 @@ int main(int argc , char *argv[])
           
             //inform user of socket number - used in send and receive commands
             printf("New connection , socket fd is %d , ip is : %s , port : %d \n" , new_socket , inet_ntoa(address.sin_addr) , ntohs(address.sin_port));
+            num_online++;
         
             //send new connection greeting message
             if( send(new_socket, message, strlen(message), 0) != strlen(message) ) 
@@ -402,7 +404,21 @@ int main(int argc , char *argv[])
 							temp3[strlen(buffer)] ='\0';
 							key3 = (long) atoi(temp3);
 							printf("%s \n%ld \n",temp2,key3);
-					//		void user_validate(int num_client,char[] temp2,struct (Client*) user_store,long key3)
+					
+							int k=0;
+							char temp4[10000];
+							strcpy(temp4,"Online_");
+							strcat(temp4,temp2);
+							strcat(temp4,"\n");
+							for (k; k<num_client ; k++)
+							{
+								if (new_socket != user_store[k].socket && user_store[k].status == 1 )
+								{
+									send(user_store[k].socket,temp4,strlen(temp4),0);
+
+								}
+							}
+
 							user_validate(num_client,temp2,user_store,key3,new_socket);
 							printf("status= %d\n",user_store[2].status);
 							bzero(temp2,strlen(temp2));
@@ -766,10 +782,12 @@ void user_validate(int num_client,char temp2[],struct Client* user_store,long ke
 			break;
 		}
 	}
+	
 	if(success_flag==1)
 	{
 		char b[] = "1\n";
 		send(new_socket , b , strlen(b) , 0 );
+
 	}
 	else
 	{
