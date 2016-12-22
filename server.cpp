@@ -557,9 +557,16 @@ int main(int argc , char *argv[])
 										{
 											int rcNum = recv( sd , mbuffer, 1024, 0);
 											// memcpy(file_buffer + 1018 + i*1024, mbuffer, 1024);
-											
-											memcpy(file_buffer + sum - 6, mbuffer, rcNum);
-											sum += rcNum;
+											if (sum + rcNum <= newImage.fileSize) {
+												memcpy(file_buffer + sum - 6, mbuffer, rcNum);
+												sum += rcNum;
+											} else {
+												memcpy(file_buffer + sum - 6, mbuffer, newImage.fileSize + 6 - sum);
+												printf("last buffer: %d\n",newImage.fileSize + 6 - sum); 
+												sum += (newImage.fileSize + 6 - sum);
+												printf("final sum: %d\n", sum);
+												printf("compare to size: %d\n", newImage.fileSize + 6); 
+											}
 										}
 																	
 										printf("Sum: %d\n", sum);	
