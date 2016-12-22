@@ -552,10 +552,14 @@ int main(int argc , char *argv[])
 										int loop = (newImage.fileSize - 1018)/1024;
 										int sum = 1024;
 										char *mbuffer = new char[1024];
-										for (int i = 0; i < loop; ++i)									
+										while (sum < newImage.fileSize + 6)
+										// for (int i = 0; i < loop; ++i)									
 										{
-											sum += recv( sd , mbuffer, 1024, 0);
-											memcpy(file_buffer + 1018 + i*1024, mbuffer, 1024);
+											int rcNum = recv( sd , mbuffer, 1024, 0);
+											// memcpy(file_buffer + 1018 + i*1024, mbuffer, 1024);
+											
+											memcpy(file_buffer + sum - 6, mbuffer, rcNum);
+											sum += rcNum;
 										}
 																	
 										printf("Sum: %d\n", sum);	
@@ -783,12 +787,12 @@ void user_validate(int num_client,char temp2[],struct Client* user_store,long ke
 	}
 	if(success_flag==1)
 	{
-		char b[] = "1\n";
+		char b[] = "1\n\0";
 		send(new_socket , b , strlen(b) , 0 );
 	}
 	else
 	{
-		char b[] = "2\n";
+		char b[] = "2\n\0";
 		send(new_socket , b , strlen(b) , 0 );
 	}
 }
@@ -831,7 +835,7 @@ char* cmd_help(int id, char *server_message, struct Client *user_store)
 void checkstatus(struct Client *user_store)
 {
 	char temp[1000];
-	strcat(temp,"ListOnline");
+	strcpy(temp,"ListOnline");
 	int i=0;
 	
 	for (i; i<num_client; i++)
@@ -847,7 +851,7 @@ void checkstatus(struct Client *user_store)
 			
 		}
 	}
-	char temp3[] = "\n";
+	char temp3[] = "\n\0";
 	strcat(temp, temp3);
 	send(user_store[map_id].socket,temp,strlen(temp),0);
 	bzero(temp,strlen(temp));
