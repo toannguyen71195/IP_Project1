@@ -552,8 +552,7 @@ int main(int argc , char *argv[])
 										int loop = (newImage.fileSize - 1018)/1024;
 										int sum = 1024;
 										char *mbuffer = new char[1024];
-										while (sum < newImage.fileSize + 6)
-										// for (int i = 0; i < loop; ++i)									
+										while (sum < newImage.fileSize + 6)								
 										{
 											int rcNum = recv( sd , mbuffer, 1024, 0);
 											// memcpy(file_buffer + 1018 + i*1024, mbuffer, 1024);

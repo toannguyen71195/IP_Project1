@@ -232,7 +232,7 @@ int main(int argc , char *argv[])
 				{
 					printf("Meta data accepted\n");
 					char imagePath[200];
-					strcpy(imagePath, "test2.png");
+					strcpy(imagePath, "test2.jpg");
 					printf("sock %d\n", sock);
 					sendImage(imagePath, sock);
 				}
@@ -427,14 +427,22 @@ void sendImage(char imagePath[], int socket)
 
 void receiveImage(char filePath[], int size, int socket)
 {
-	int loop = size/1024;
 	char file_buffer[size];
-	char rbuffer[1024];
-	printf("Loop: %d", loop);
-	for (int i = 0; i < loop; ++i)
+	char mbuffer[1024];
+	int sum = 0;
+	while (sum < size)
 	{
-		read(socket, rbuffer, 1024);
-		memcpy(file_buffer + i*1024, rbuffer, 1024);
+		int rcNum = read(socket, mbuffer, 1024);
+		if (sum + rcNum <= size) {
+			memcpy(file_buffer + sum, mbuffer, rcNum);
+			sum += rcNum;
+		} else {
+			memcpy(file_buffer + sum, mbuffer, size - sum);
+			printf("last buffer: %d\n", size - sum); 
+			sum += (size - sum);
+			printf("final sum: %d\n", sum);
+			printf("compare to size: %d\n", size); 
+		}
 	}
 
 	//Convert it Back into Picture
