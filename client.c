@@ -272,7 +272,7 @@ int main(int argc , char *argv[])
 				printf("Receive image\n");
 				char filePath[200];
 				strcpy(filePath, "download.jpg");
-				int size = 633445;
+				int size = 1691186;
 				receiveImage(filePath, size, sock);
 				waitforimage = false;
 				printf("Finisehd rcv\n");
@@ -433,7 +433,10 @@ void receiveImage(char filePath[], int size, int socket)
 	while (sum < size)
 	{
 		int rcNum = read(socket, mbuffer, 1024);
-		if (sum + rcNum <= size) {
+		if (sum == 0) {
+			memcpy(file_buffer, mbuffer + 6, rcNum - 6);
+			sum += rcNum - 6;
+		} else if (sum + rcNum <= size) {
 			memcpy(file_buffer + sum, mbuffer, rcNum);
 			sum += rcNum;
 		} else {

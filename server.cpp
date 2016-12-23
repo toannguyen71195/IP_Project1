@@ -340,9 +340,9 @@ int main(int argc , char *argv[])
 						} 
 					} 
 					char temp[1000]; 
-					strcat(temp,"Offline_"); 
+					strcpy(temp,"Offline_"); 
 					strcat(temp,user_name); 
-					char temp2[] = "\n"; 
+					char temp2[] = "\n\0"; 
 					strcat(temp,temp2); 
 					for (int k=0; k<num_client; k++) 
 					{ 
@@ -408,7 +408,7 @@ int main(int argc , char *argv[])
 							char temp4[10000]; 
 							strcpy(temp4,"Online_"); 
 							strcat(temp4,temp2); 
-							strcat(temp4,"\n"); 
+							strcat(temp4,"\n\0"); 
 							for (k; k<num_client ; k++) 
 							{ 
 								if (new_socket != user_store[k].socket && user_store[k].status == 1 ) 
@@ -706,8 +706,11 @@ int main(int argc , char *argv[])
 											fread(file_buffer, 1, fsize, picture);
 	
 											printf("Send buffer: %s", file_buffer);
-											
-											send(user_store[map_id].socket, file_buffer, fsize,0);
+
+											char send_buffer[fsize + 6];
+											memcpy(send_buffer, "Image_", 6);
+											memcpy(send_buffer + 6, file_buffer, fsize);
+											send(user_store[map_id].socket, send_buffer, fsize + 6,0);
 
 											// send(user_store[map_id].socket, "7", strlen("7"), 0); // ok send
 										}
