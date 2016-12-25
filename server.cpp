@@ -535,7 +535,7 @@ int main(int argc , char *argv[])
 										{
 											char x[1000];
 											strcpy(x,"The username already exist, Please try another name !!\n");
-											send(user_store[map_id].socket,x,strlen(x),0);
+											send(client_socket[i],x,strlen(x),0);
 											
 										}
 										else
@@ -555,7 +555,7 @@ int main(int argc , char *argv[])
 											user_store[num_client] = temp;
 											num_client++;
 
-											send(user_store[map_id].socket, "9\n", strlen("9\n"), 0);
+											send(client_socket[i], "9\n", strlen("9\n"), 0);
 										}
 									}
 									else if (strcmp(action, "Image") == 0)
