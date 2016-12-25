@@ -97,6 +97,7 @@ void readAllImage(ifstream& fin, Image* all, int &num);
 bool checkImageValid(Image image, Image* all, int num);
 char* removeExtension(char name[]);
 int checkImageExist(char image[], Image* all, int num);
+bool CheckExistUser(char* newUser,struct Client* user_store);
 
 //Functions
 char *action_form_buffer(char buffer[]);
@@ -530,19 +531,32 @@ int main(int argc , char *argv[])
 										// SignUp_username_password
 										char newUser[50], pass[50];
 										parseStringSignUp(buffer, newUser, pass);
-										int pwd = atoi(pass);
-										fstream fout;
-										fout.open("data_client.txt", std::ios::out | std::ios::trunc);
-										write_file(fout, newUser, pwd, user_store);
-										fout.close();
+										if (CheckExistUser(newUser,user_store))
+										{
+											char x[1000];
+											strcpy(x,"The username already exist, Please try another name !!\n");
+											send(user_store[map_id].socket,x,strlen(x),0);
+											
+										}
+										else
+										{
+											bzero(newUser,strlen(newUser));
+											bzero(pass,strlen(pass));
+											parseStringSignUp(buffer, newUser, pass);
+											int pwd = atoi(pass);
+											fstream fout;
+											fout.open("data_client.txt", std::ios::out | std::ios::trunc);
+											write_file(fout, newUser, pwd, user_store);
+											fout.close();
 
-										printf("Signed up %s %d\n", newUser, pwd);
+											printf("Signed up %s %d\n", newUser, pwd);
 
-										struct Client temp = Object_new(newUser, pwd, 0, 0, 0);
-										user_store[num_client] = temp;
-										num_client++;
+											struct Client temp = Object_new(newUser, pwd, 0, 0, 0);
+											user_store[num_client] = temp;
+											num_client++;
 
-										send(user_store[map_id].socket, "9\n", strlen("9\n"), 0);
+											send(user_store[map_id].socket, "9\n", strlen("9\n"), 0);
+										}
 									}
 									else if (strcmp(action, "Image") == 0)
 									{
@@ -1028,7 +1042,18 @@ int checkImageExist(char image[], Image* all, int num) {
 	return -1;
 }
 
+bool CheckExistUser(char* newUser,struct Client* user_store)
+{
+	int i=0;
+	
+	for (i; i<num_client; i++)
+	{
+		if (strcmp(newUser,user_store[i].name) == 0)
 
+			return true;
+	}
+	return false;
+}
 
 
 
